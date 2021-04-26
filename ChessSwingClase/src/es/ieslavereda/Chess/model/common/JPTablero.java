@@ -219,5 +219,6 @@ public class JPTablero extends JPanel {
 	public HashMap<Coordenada, Celda> getTablero() {
 		return tablero;
 	}
+	
 
 }

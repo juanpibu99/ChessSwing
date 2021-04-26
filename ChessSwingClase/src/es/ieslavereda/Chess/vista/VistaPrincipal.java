@@ -31,6 +31,7 @@ public class VistaPrincipal extends JFrame {
 	private JMenuItem mntmPreferences;
 	private JMenuItem mntmOpen;
 	private JMenuItem mntmSave;
+	private JMenuItem mntmNew;
 	/**
 	 * Create the frame.
 	 */
@@ -57,6 +58,9 @@ public class VistaPrincipal extends JFrame {
 				System.exit(1);
 			}
 		});
+		
+		mntmNew = new JMenuItem("New");
+		mnFile.add(mntmNew);
 		mnFile.add(mntmExit);
 		
 		JMenu mnEdit = new JMenu("Edit");
@@ -133,6 +137,9 @@ public class VistaPrincipal extends JFrame {
 	}
 	public JMenuItem getMntmSave() {
 		return mntmSave;
+	}
+	public JMenuItem getMntmNew() {
+		return mntmNew;
 	}
 	
 	

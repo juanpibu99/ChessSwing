@@ -32,7 +32,7 @@ import es.ieslavereda.Chess.vista.Preferencias;
 import es.ieslavereda.Chess.vista.VistaPrincipal;
 import es.ieslavereda.Chess.model.common.*;
 
-public class ControladorPrincipal implements ActionListener,MouseListener,Serializable {
+public class ControladorPrincipal implements ActionListener, MouseListener, Serializable {
 
 	private VistaPrincipal vista;
 	private JPTurno jpTurno;
@@ -42,11 +42,10 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 	private DefaultListModel<Movimiento> dlm;
 	private Deque<Movimiento> stack;
 
-
 	public ControladorPrincipal(VistaPrincipal vista) {
 		super();
 		this.vista = vista;
-		
+
 		stack = new ArrayDeque<Movimiento>();
 
 		inicializar();
@@ -71,9 +70,10 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 		// Añadimos los MouseListener
 		vista.getPanelMovimientos().getList().addMouseListener(this);
-		
+
 		// Añadimos los ActionListener
 		vista.getMntmPreferences().addActionListener(this);
+		vista.getMntmNew().addActionListener(this);
 		vista.getPanelMovimientos().getBtnPrev().addActionListener(this);
 		vista.getPanelMovimientos().getBtnNext().addActionListener(this);
 		vista.getMntmSave().addActionListener(this);
@@ -81,6 +81,7 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 		// Añadimos los ActionCommand
 		vista.getMntmPreferences().setActionCommand("Abrir preferencias");
+		vista.getMntmNew().setActionCommand("Nueva partida");
 		vista.getPanelMovimientos().getBtnPrev().setActionCommand("Previous movement");
 		vista.getPanelMovimientos().getBtnNext().setActionCommand("Next movement");
 		vista.getMntmSave().setActionCommand("Guardar");
@@ -109,18 +110,23 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 			guardar();
 		} else if (comando.equals("Cargar")) {
 			cargar();
+		} else if (comando.equals("Nueva partida")) {
+			if (dlm.size() > 0) {
+				reiniciarPartida();
+			}
+
 		} else if (comando.equals("Previous movement")) {
-			if(piezaSeleccionada!=null) {
+			if (piezaSeleccionada != null) {
 				desmarcarPosiblesDestinos();
 			}
 			previousMovement();
-			piezaSeleccionada=null;
+			piezaSeleccionada = null;
 		} else if (comando.equals("Next movement")) {
-			if(piezaSeleccionada!=null) {
+			if (piezaSeleccionada != null) {
 				desmarcarPosiblesDestinos();
 			}
 			nextMovement();
-			piezaSeleccionada=null;
+			piezaSeleccionada = null;
 		} else if (arg0.getSource() instanceof Celda) {
 			comprobarMovimiento((Celda) arg0.getSource());
 		}
@@ -131,73 +137,79 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 		try {
 			Movimiento m = stack.pop();
-			dlm.addElement(m);
-			Coordenada origen, destino;
+			
 
-			origen = m.getOrigen();
-			destino = m.getDestino();
-
-			switch (m.getTipoAccion()) {
-			case Movimiento.NOT_KILL:
-				vista.getPanelTablero().getPiezaAt(origen).setPosicion(destino);
-				vista.getPanelTablero().getCeldaAt(destino).setPieza(vista.getPanelTablero().getPiezaAt(origen));
-				vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
-				
-
-				break;
-
-			case Movimiento.KILL:
-				vista.getPanelTablero().getPiezaAt(origen).setPosicion(destino);
-				vista.getPanelTablero().getCeldaAt(destino).setPieza(vista.getPanelTablero().getPiezaAt(origen));
-				vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
-				if (m.getFicha().getColor() == Color.WHITE)
-					vista.getPanelTablero().getBlancas().remove(m.getFicha());
-				else
-					vista.getPanelTablero().getNegras().remove(m.getFicha());
-				gestionFichasEliminadas.addPiece(m.getFicha());
-				break;
-			case Movimiento.RISE:
-				m.getFichaGenerada().setPosicion(destino);
-				vista.getPanelTablero().getCeldaAt(destino).setPieza(m.getFichaGenerada());
-				vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
-				
-				if (m.getFichaPeon().getColor() == Color.WHITE) {
-					vista.getPanelTablero().getBlancas().add(m.getFichaGenerada());
-					vista.getPanelTablero().getBlancas().remove(m.getFichaPeon());
-				}else {
-					vista.getPanelTablero().getNegras().add(m.getFichaGenerada());
-					vista.getPanelTablero().getNegras().remove(m.getFichaPeon());
-				}
-				break;
-			case Movimiento.RISE_KILLING:
-				vista.getPanelTablero().getCeldaAt(destino).setPieza(m.getFichaGenerada());
-				vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
-				gestionFichasEliminadas.addPiece(m.getFicha());
-				if (m.getFichaPeon().getColor() == Color.WHITE) {
-					vista.getPanelTablero().getBlancas().add(m.getFichaGenerada());
-					vista.getPanelTablero().getBlancas().remove(m.getFichaPeon());
-					vista.getPanelTablero().getNegras().remove(m.getFicha());
-					
-				}else {
-					vista.getPanelTablero().getBlancas().remove(m.getFicha());
-					vista.getPanelTablero().getNegras().add(m.getFichaGenerada());
-					vista.getPanelTablero().getNegras().remove(m.getFichaPeon());
-				}
-				break;
-				
-			default:
-				throw new Exception("Error interno. Movimento desconocido");
-			}
-
-			vista.getPanelTurno().cambioTurno();
-			Movimiento.increaseNumberOfMovements();
-
+			nextMovement(m);
+			
 		} catch (NoSuchElementException ne) {
 			JOptionPane.showMessageDialog(vista, "No hay movimientos para avanzar", "Error", JOptionPane.ERROR_MESSAGE);
 		} catch (Exception e) {
 			e.printStackTrace();
 			JOptionPane.showMessageDialog(vista, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
+	}
+
+	private void nextMovement(Movimiento m) throws Exception {
+
+		Coordenada origen, destino;
+		dlm.addElement(m);
+
+		origen = m.getOrigen();
+		destino = m.getDestino();
+
+		switch (m.getTipoAccion()) {
+		case Movimiento.NOT_KILL:
+			vista.getPanelTablero().getPiezaAt(origen).setPosicion(destino);
+			vista.getPanelTablero().getCeldaAt(destino).setPieza(vista.getPanelTablero().getPiezaAt(origen));
+			vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
+
+			break;
+
+		case Movimiento.KILL:
+			vista.getPanelTablero().getPiezaAt(origen).setPosicion(destino);
+			vista.getPanelTablero().getCeldaAt(destino).setPieza(vista.getPanelTablero().getPiezaAt(origen));
+			vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
+			if (m.getFicha().getColor() == Color.WHITE)
+				vista.getPanelTablero().getBlancas().remove(m.getFicha());
+			else
+				vista.getPanelTablero().getNegras().remove(m.getFicha());
+			gestionFichasEliminadas.addPiece(m.getFicha());
+			break;
+		case Movimiento.RISE:
+			m.getFichaGenerada().setPosicion(destino);
+			vista.getPanelTablero().getCeldaAt(destino).setPieza(m.getFichaGenerada());
+			vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
+
+			if (m.getFichaPeon().getColor() == Color.WHITE) {
+				vista.getPanelTablero().getBlancas().add(m.getFichaGenerada());
+				vista.getPanelTablero().getBlancas().remove(m.getFichaPeon());
+			} else {
+				vista.getPanelTablero().getNegras().add(m.getFichaGenerada());
+				vista.getPanelTablero().getNegras().remove(m.getFichaPeon());
+			}
+			break;
+		case Movimiento.RISE_KILLING:
+			vista.getPanelTablero().getCeldaAt(destino).setPieza(m.getFichaGenerada());
+			vista.getPanelTablero().getCeldaAt(origen).setPieza(null);
+			gestionFichasEliminadas.addPiece(m.getFicha());
+			if (m.getFichaPeon().getColor() == Color.WHITE) {
+				vista.getPanelTablero().getBlancas().add(m.getFichaGenerada());
+				vista.getPanelTablero().getBlancas().remove(m.getFichaPeon());
+				vista.getPanelTablero().getNegras().remove(m.getFicha());
+
+			} else {
+				vista.getPanelTablero().getBlancas().remove(m.getFicha());
+				vista.getPanelTablero().getNegras().add(m.getFichaGenerada());
+				vista.getPanelTablero().getNegras().remove(m.getFichaPeon());
+			}
+			break;
+
+		default:
+			throw new Exception("Error interno. Movimento desconocido");
+		}
+
+		vista.getPanelTurno().cambioTurno();
+		Movimiento.increaseNumberOfMovements();
 
 	}
 
@@ -217,7 +229,6 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 				vista.getPanelTablero().getPiezaAt(destino).setPosicion(origen);
 				vista.getPanelTablero().getCeldaAt(origen).setPieza(vista.getPanelTablero().getPiezaAt(destino));
 				vista.getPanelTablero().getCeldaAt(destino).setPieza(null);
-				
 
 				break;
 
@@ -234,17 +245,16 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 					vista.getPanelTablero().getNegras().add(m.getFicha());
 
 				break;
-			
+
 			case Movimiento.RISE:
 				m.getFichaPeon().setPosicion(origen);
 				vista.getPanelTablero().getCeldaAt(destino).setPieza(null);
 				vista.getPanelTablero().getCeldaAt(origen).setPieza(m.getFichaPeon());
-				
-				if (m.getFichaPeon().getColor() == Color.WHITE) { 
+
+				if (m.getFichaPeon().getColor() == Color.WHITE) {
 					vista.getPanelTablero().getBlancas().add(m.getFichaPeon());
 					vista.getPanelTablero().getBlancas().remove(m.getFichaGenerada());
-				}
-				else {
+				} else {
 					vista.getPanelTablero().getNegras().add(m.getFichaPeon());
 					vista.getPanelTablero().getNegras().remove(m.getFichaGenerada());
 				}
@@ -260,7 +270,7 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 					vista.getPanelTablero().getBlancas().remove(m.getFichaGenerada());
 					vista.getPanelTablero().getBlancas().add(m.getFichaPeon());
 					vista.getPanelTablero().getNegras().add(m.getFicha());
-				}else {
+				} else {
 					vista.getPanelTablero().getBlancas().add(m.getFicha());
 					vista.getPanelTablero().getNegras().add(m.getFichaPeon());
 					vista.getPanelTablero().getNegras().remove(m.getFichaGenerada());
@@ -283,54 +293,60 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 	}
 
-
-
-
-
 	private void cambiarColorCeldaBlanca() {
 
-		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorCeldaBlanca(), "Selecciona color de las celdas blancas", jfPreferencias.getBtnColorCeldaBlanca().getBackground());
+		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorCeldaBlanca(),
+				"Selecciona color de las celdas blancas", jfPreferencias.getBtnColorCeldaBlanca().getBackground());
 
-		if(color!=null) {
-		jfPreferencias.getBtnColorCeldaBlanca().setBackground(color);
-		MyConfig.getInstancia().setWhiteCellColor(color);
-		Celda.colorCeldaBlanca=color;
-		vista.getPanelTablero().repaintBoard();
+		if (color != null) {
+			jfPreferencias.getBtnColorCeldaBlanca().setBackground(color);
+			MyConfig.getInstancia().setWhiteCellColor(color);
+			Celda.colorCeldaBlanca = color;
+			vista.getPanelTablero().repaintBoard();
 
 		}
 	}
+
 	private void cambiarColorCeldaNegra() {
 
-		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorCeldaNegra(), "Selecciona color de las celdas negras", jfPreferencias.getBtnColorCeldaNegra().getBackground());
+		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorCeldaNegra(),
+				"Selecciona color de las celdas negras", jfPreferencias.getBtnColorCeldaNegra().getBackground());
 
-		if(color!=null) {
-		jfPreferencias.getBtnColorCeldaNegra().setBackground(color);
-		MyConfig.getInstancia().setBlackCellColor(color);
-		Celda.colorCeldaNegra=color;
-		vista.getPanelTablero().repaintBoard();
+		if (color != null) {
+			jfPreferencias.getBtnColorCeldaNegra().setBackground(color);
+			MyConfig.getInstancia().setBlackCellColor(color);
+			Celda.colorCeldaNegra = color;
+			vista.getPanelTablero().repaintBoard();
 
 		}
 	}
+
 	private void cambiarColorBordeNormal() {
-		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorBordeCelda(), "Selecciona color de los bordes de los posibles movimientos", jfPreferencias.getBtnColorBordeCelda().getBackground());
+		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorBordeCelda(),
+				"Selecciona color de los bordes de los posibles movimientos",
+				jfPreferencias.getBtnColorBordeCelda().getBackground());
 
-		if(color!=null) {
-		jfPreferencias.getBtnColorBordeCelda().setBackground(color);
-		MyConfig.getInstancia().setBorderCell(color);
-		Celda.colorBordeCelda=color;
-		vista.getPanelTablero().repaintBoard();
+		if (color != null) {
+			jfPreferencias.getBtnColorBordeCelda().setBackground(color);
+			MyConfig.getInstancia().setBorderCell(color);
+			Celda.colorBordeCelda = color;
+			vista.getPanelTablero().repaintBoard();
 		}
 	}
+
 	private void cambiarColorBordeMatando() {
-		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorBordeCelda(), "Selecciona color de los bordes de los posibles movimientos matando", jfPreferencias.getBtnColorBordeCelda().getBackground());
+		java.awt.Color color = JColorChooser.showDialog(jfPreferencias.getBtnColorBordeCelda(),
+				"Selecciona color de los bordes de los posibles movimientos matando",
+				jfPreferencias.getBtnColorBordeCelda().getBackground());
 
-		if(color!=null) {
-		jfPreferencias.getBtnColorBordeCeldaComer().setBackground(color);
-		MyConfig.getInstancia().setBorderCellKill(color);
-		Celda.colorBordeCeldaComer=color;
-		vista.getPanelTablero().repaintBoard();
+		if (color != null) {
+			jfPreferencias.getBtnColorBordeCeldaComer().setBackground(color);
+			MyConfig.getInstancia().setBorderCellKill(color);
+			Celda.colorBordeCeldaComer = color;
+			vista.getPanelTablero().repaintBoard();
 		}
 	}
+
 	private void abrirPreferencias() {
 
 		jfPreferencias = new Preferencias();
@@ -377,32 +393,33 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 			desmarcarPosiblesDestinos();
 
-			
 			if (c.contienePieza()) {
-		
+				c.getPieza().setTablero(null);
 				if ((tablero.getCoordenadaOfCelda(c).getRow() == 1 || tablero.getCoordenadaOfCelda(c).getRow() == 8)
 						&& piezaSeleccionada instanceof Pawn) {
+					
 					m = new Movimiento(origen, destino, Movimiento.RISE_KILLING, c.getPieza(), null, piezaSeleccionada);
-
+					
 				} else {
+					
 					m = new Movimiento(origen, destino, Movimiento.KILL, c.getPieza(), null, null);
 				}
 
 				gestionFichasEliminadas.addPiece(c.getPieza());
 			}
 
-		
 			if (m == null
 					&& (tablero.getCoordenadaOfCelda(c).getRow() == 1 || tablero.getCoordenadaOfCelda(c).getRow() == 8)
 					&& piezaSeleccionada instanceof Pawn) {
+			
 				m = new Movimiento(origen, destino, Movimiento.RISE, null, null, piezaSeleccionada);
-
+				
 			} else if (m == null) {
 				m = new Movimiento(origen, destino, Movimiento.NOT_KILL, null, null, null);
 			}
-
+		
 			dlm.addElement(m);
-
+		
 			piezaSeleccionada.moveTo(tablero.getCoordenadaOfCelda(c));
 			if (m.getTipoAccion() == Movimiento.RISE || m.getTipoAccion() == Movimiento.RISE_KILLING) {
 				m.setFichaGenerada(c.getPieza());
@@ -410,23 +427,26 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 			piezaSeleccionada = null;
 			vista.getPanelTurno().getJLabelPieza().setIcon(null);
-			if(jpTurno.getTurno()==Color.WHITE) {
-				if(vista.getPanelTablero().check(Color.BLACK)) {
-					JOptionPane.showMessageDialog(vista, "El rey negro esta en jaque", "JAQUE", JOptionPane.DEFAULT_OPTION);
+			if (jpTurno.getTurno() == Color.WHITE) {
+				if (vista.getPanelTablero().check(Color.BLACK)) {
+					JOptionPane.showMessageDialog(vista, "El rey negro esta en jaque", "JAQUE",
+							JOptionPane.DEFAULT_OPTION);
 				}
-				
-				
-			}else {
-				if(vista.getPanelTablero().check(Color.WHITE)) {
-					JOptionPane.showMessageDialog(vista, "El rey blanco esta en jaque", "JAQUE", JOptionPane.DEFAULT_OPTION);
+
+			} else {
+				if (vista.getPanelTablero().check(Color.WHITE)) {
+					JOptionPane.showMessageDialog(vista, "El rey blanco esta en jaque", "JAQUE",
+							JOptionPane.DEFAULT_OPTION);
 				}
-				
+
 			}
-			if(!vista.getPanelTablero().blackKingIsAlive()) {
-				JOptionPane.showMessageDialog(vista, "Enhorabuena, han ganado las blancas", "VICTORIA", JOptionPane.DEFAULT_OPTION);
+			if (!vista.getPanelTablero().blackKingIsAlive()) {
+				JOptionPane.showMessageDialog(vista, "Enhorabuena, han ganado las blancas", "VICTORIA",
+						JOptionPane.DEFAULT_OPTION);
 				finalPartida();
-			}else if(!vista.getPanelTablero().whiteKingIsAlive()) {
-				JOptionPane.showMessageDialog(vista, "Enhorabuena, han ganado las negras", "VICTORIA", JOptionPane.DEFAULT_OPTION);
+			} else if (!vista.getPanelTablero().whiteKingIsAlive()) {
+				JOptionPane.showMessageDialog(vista, "Enhorabuena, han ganado las negras", "VICTORIA",
+						JOptionPane.DEFAULT_OPTION);
 				finalPartida();
 			}
 			jpTurno.cambioTurno();
@@ -435,8 +455,9 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 		}
 
 	}
+
 	private void finalPartida() {
-		for(Celda c:vista.getPanelTablero().getTablero().values()) {
+		for (Celda c : vista.getPanelTablero().getTablero().values()) {
 			c.setEnabled(false);
 		}
 	}
@@ -489,63 +510,80 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
-		
+
 		Component c = arg0.getComponent();
-		if(c == vista.getPanelMovimientos().getList()) {
+		if (c == vista.getPanelMovimientos().getList()) {
 			int index = vista.getPanelMovimientos().getList().getSelectedIndex();
-			
+
 			while (dlm.getSize() > index) {
 				previousMovement();
 			}
 
 		}
-		
+
 	}
 
 	public void guardar() {
-		
-		JFileChooser jfc=new JFileChooser();
-		jfc.setFileFilter(new FileNameExtensionFilter("Formulario file","app","miapp"));
-		int opcion=jfc.showSaveDialog(vista);
-		if(opcion==JFileChooser.APPROVE_OPTION) {
-			
-			ArrayList<Movimiento> movimientos=new ArrayList<Movimiento>();
-			int m=Movimiento.getNumero();
-			
-			for(int i=0;i<dlm.size();i++) {
+
+		JFileChooser jfc = new JFileChooser();
+		jfc.setFileFilter(new FileNameExtensionFilter("Formulario file", "app", "miapp"));
+		int opcion = jfc.showSaveDialog(vista);
+		if (opcion == JFileChooser.APPROVE_OPTION) {
+
+			ArrayList<Movimiento> movimientos = new ArrayList<Movimiento>();
+			int m = Movimiento.getNumero();
+
+			for (int i = 0; i < dlm.size(); i++) {
+				if(dlm.get(i).getTipoAccion()==Movimiento.RISE|dlm.get(i).getTipoAccion()==Movimiento.RISE_KILLING) {
+					dlm.get(i).getFichaGenerada().setTablero(null);
+					dlm.get(i).getFichaPeon().setTablero(null);
+				}
 				movimientos.add(dlm.get(i));
 			}
-			for(Movimiento mov: stack) {
+			for (Movimiento mov : stack) {
 				movimientos.add(mov);
-			}		
-			
-			try(ObjectOutputStream oos= new ObjectOutputStream(new FileOutputStream(jfc.getSelectedFile()))){
+			}
+
+			try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(jfc.getSelectedFile()))) {
 				oos.writeObject(movimientos);
 				oos.writeObject(m);
-			}catch(FileNotFoundException o){
+				System.out.println(movimientos);
+			} catch (FileNotFoundException o) {
 				o.printStackTrace();
-			}catch(IOException e){
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		
+
 	}
-	private void cargar() {
-		JFileChooser jfc=new JFileChooser();
-		jfc.setFileFilter(new FileNameExtensionFilter("Formulario file","app","miapp"));
-		int opcion=jfc.showOpenDialog(vista);
-		if(opcion==JFileChooser.APPROVE_OPTION) {
-			
-			try(ObjectInputStream ois= new ObjectInputStream(new FileInputStream(jfc.getSelectedFile()))){
-				ArrayList<Movimiento> movimientos=(ArrayList<Movimiento>) ois.readObject();
-				int m=(int) ois.readObject();
-				for(int i=0;i<m;i++)
-					nextMovement();
+
+	private void cargar()   {
+		JFileChooser jfc = new JFileChooser();
+		jfc.setFileFilter(new FileNameExtensionFilter("Formulario file", "app", "miapp"));
+		int opcion = jfc.showOpenDialog(vista);
+		if (opcion == JFileChooser.APPROVE_OPTION) {
+			if (dlm.size() > 0) {
+				reiniciarPartida();
+			}
+
+			try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(jfc.getSelectedFile()))) {
+				ArrayList<Movimiento> movimientos = (ArrayList<Movimiento>) ois.readObject();
+				int m = (int) ois.readObject();
+
+				
+				for (Movimiento movimiento:movimientos) {
+					if(movimiento.getTipoAccion()==Movimiento.RISE||movimiento.getTipoAccion()==Movimiento.RISE_KILLING) {
+						movimiento.getFichaGenerada().setTablero(vista.getPanelTablero());
+						movimiento.getFichaPeon().setTablero(vista.getPanelTablero());
+					}
+					nextMovement(movimiento);
+				}
+				
+				while(Movimiento.getNumero()>m)
+					previousMovement();
 				
 				
-				
-				
-				
+
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -553,37 +591,45 @@ public class ControladorPrincipal implements ActionListener,MouseListener,Serial
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-				
-			
-		}
-			
-	}
-	
 
+		}
+
+	}
+
+	public void reiniciarPartida() {
+
+		do {
+			previousMovement();
+		} while (dlm.size() > 0);
+		stack.removeAll(stack);
+	}
 
 	@Override
 	public void mouseEntered(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void mouseExited(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void mousePressed(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 }

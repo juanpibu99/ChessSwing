@@ -59,6 +59,11 @@ public abstract class Pieza implements Serializable {
 	public void setPosicion(Coordenada posicion) {
 		this.posicion = posicion;
 	}
+	
+
+	public void setTablero(JPTablero tablero) {
+		this.tablero = tablero;
+	}
 
 	public abstract Set<Coordenada> getNextMovements();
 }
